@@ -9,7 +9,7 @@ import org.hibernate.annotations.Where;
 @Where(clause = "active = true")
 public class Scheduling extends BaseEntity{
 
-    @ManyToOne(cascade = CascadeType.ALL)
+    @ManyToOne
     @JoinColumn(name = "user_id")
     private User user;
 

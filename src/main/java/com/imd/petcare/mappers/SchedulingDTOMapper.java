@@ -24,7 +24,9 @@ public class SchedulingDTOMapper implements DtoMapper<Scheduling, SchedulingDTO>
     @Override
     public Scheduling toEntity(SchedulingDTO schedulingDTO) {
         Scheduling scheduling = new Scheduling();
-        scheduling.setId(schedulingDTO.id());
+        if(schedulingDTO.id() != null) {
+            scheduling.setId(schedulingDTO.id());
+        }
         scheduling.setTitle(schedulingDTO.title());
         scheduling.setDescription(schedulingDTO.description());
         scheduling.setMonth(schedulingDTO.month());
