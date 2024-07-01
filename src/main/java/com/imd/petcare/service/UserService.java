@@ -31,6 +31,7 @@ public class UserService implements GenericService<User, UserDTO> {
     private final UserRepository repository;
     private final UserDTOMapper mapper;
     private final PasswordEncoder passwordEncoder;
+    private final UserRepository userRepository;
 
     /**
      * Constructs a new UserService with the provided dependencies.
@@ -41,6 +42,7 @@ public class UserService implements GenericService<User, UserDTO> {
      */
     public UserService(UserRepository repository, UserDTOMapper mapper, PasswordEncoder passwordEncoder) {
         this.repository = repository;
+        this.userRepository = repository;
         this.mapper = mapper;
         this.passwordEncoder = passwordEncoder;
     }
@@ -79,7 +81,7 @@ public class UserService implements GenericService<User, UserDTO> {
         if (id != userDTO.id()) {
             throw new BusinessException("O id não pode ser alterado!", HttpStatus.BAD_REQUEST);
         }
-        User userDb = getRepository().findById(id)
+        User userDb = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Id not found: " + id));
 
         User updatedEntity = getDtoMapper().toEntity(userDTO);
@@ -93,7 +95,7 @@ public class UserService implements GenericService<User, UserDTO> {
         checkLoginBeforeUpdate(userDb.getLogin(), updatedEntity.getLogin());
         checkEmailBeforeUpdate(userDb.getEmail(), updatedEntity.getEmail());
 
-        return getDtoMapper().toDto(getRepository().save(updatedEntity));
+        return mapper.toDto(userRepository.save(updatedEntity));
     }
 
     /**
@@ -103,7 +105,7 @@ public class UserService implements GenericService<User, UserDTO> {
      * @param loginUpdatedUser the updated login
      * @throws BusinessException if the updated login already exists in the database
      */
-    private void checkLoginBeforeUpdate(String loginUserDb, String loginUpdatedUser) {
+    public void checkLoginBeforeUpdate(String loginUserDb, String loginUpdatedUser) {
         if (!Objects.equals(loginUserDb, loginUpdatedUser)) {
             validateLogin(loginUpdatedUser);
         }
@@ -116,7 +118,7 @@ public class UserService implements GenericService<User, UserDTO> {
      * @param emailUpdatedUser the updated email
      * @throws BusinessException if the updated email already exists in the database
      */
-    private void checkEmailBeforeUpdate(String emailUserDb, String emailUpdatedUser) {
+    public void checkEmailBeforeUpdate(String emailUserDb, String emailUpdatedUser) {
         if (!Objects.equals(emailUserDb, emailUpdatedUser)) {
             validateEmail(emailUpdatedUser);
         }
@@ -129,7 +131,7 @@ public class UserService implements GenericService<User, UserDTO> {
      * @param updatedUser the updated user entity
      * @throws BusinessException if the updated identifier already exists in the database
      */
-    private void checkIdentifierBeforeUpdate(User userDb, User updatedUser) {
+    public void checkIdentifierBeforeUpdate(User userDb, User updatedUser) {
 
         var changeIdentifier = !Objects.equals(
                 userDb.getPerson().getIdentifier(),
@@ -146,7 +148,7 @@ public class UserService implements GenericService<User, UserDTO> {
      * @param login the login to validate
      * @throws BusinessException if the login already exists in the database
      */
-    private void validateLogin(String login) {
+    public void validateLogin(String login) {
         if (repository.existsByLogin(login)) {
             throw new BusinessException(
                     "Login inválido: " + login + ". Já existe um usuário cadastrado com esse identificador",
@@ -160,7 +162,7 @@ public class UserService implements GenericService<User, UserDTO> {
      * @param email the email to validate
      * @throws BusinessException if the email already exists in the database
      */
-    private void validateEmail(String email) {
+    public void validateEmail(String email) {
         if (repository.existsPersonByEmail(email)) {
             throw new BusinessException("Email inválido: " + email + ". Já existe um usuário cadastrado com esse email",
                     HttpStatus.BAD_REQUEST);
@@ -173,7 +175,7 @@ public class UserService implements GenericService<User, UserDTO> {
      * @param identifier the identifier to validate
      * @throws BusinessException if the identifier already exists in the database
      */
-    private void validateIdentifier(String identifier) {
+    public void validateIdentifier(String identifier) {
         if (repository.existsPersonByIdentifier(identifier)) {
             throw new BusinessException(
                     String.format("%s inválido: %s. Já existe um usuário cadastrado com esse identificador", identifier),
