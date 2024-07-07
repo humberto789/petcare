@@ -165,7 +165,6 @@ public class UserServiceTest {
         assertNotNull(result);
     }
 
-
     @Test
     public void testValidateBeforeSave() {
         User user = new User();
@@ -362,5 +361,89 @@ public class UserServiceTest {
     void getRepository_ShouldReturnUserRepository() {
         GenericRepository<User> repository = userService.getRepository();
         assertSame(userRepository, repository);
+    }
+
+    @Test
+    public void testGetAllRolesNotNull() {
+        List<RoleDTO> roles = userService.getAllRoles();
+        assertEquals(Role.values().length, roles.size());
+        for (RoleDTO role : roles) {
+            assertNotNull(role);
+            assertNotNull(role.name());
+            assertNotNull(role.description());
+        }
+    }
+
+    @Test
+    void testUpdate_CoversAllPitestPoints() {
+        Long id = 1L;
+        UserDTO userDTO = new UserDTO(
+                id,
+                new PersonDTO(1L, "name", "71111111111", "84987056926", LocalDate.now()),
+                "newLogin",
+                "12345",
+                "newEmail@example.com",
+                Role.ADMIN);
+
+        User userDb = new User();
+        userDb.setId(id);
+        Person personDb = new Person();
+        personDb.setId(1L);
+        userDb.setPerson(personDb);
+        userDb.setPassword("oldPassword");
+        userDb.setLogin("oldLogin");
+        userDb.setEmail("oldEmail@example.com");
+
+        User updatedUser = spy(new User());
+        Person updatedPerson = spy(new Person());
+        updatedUser.setPerson(updatedPerson);
+
+        when(userRepository.findById(id)).thenReturn(Optional.of(userDb));
+        when(userDTOMapper.toEntity(userDTO)).thenReturn(updatedUser);
+        when(userRepository.save(any(User.class))).thenReturn(updatedUser);
+        when(userDTOMapper.toDto(any(User.class))).thenReturn(userDTO);
+
+        doNothing().when(userService).checkIdentifierBeforeUpdate(any(User.class), any(User.class));
+        doNothing().when(userService).checkLoginBeforeUpdate(anyString(), anyString());
+        doNothing().when(userService).checkEmailBeforeUpdate(anyString(), anyString());
+
+        UserDTO result = userService.update(id, userDTO);
+
+        assertEquals(userDTO, result);
+
+        verify(userRepository).findById(id);
+        verify(userDTOMapper).toEntity(userDTO);
+        verify(updatedUser).setId(id);
+        verify(updatedUser).getPerson();
+        verify(updatedPerson).setId(userDb.getPerson().getId());
+        verify(updatedUser).setPassword(userDb.getPassword());
+        verify(updatedUser).setRole(userDTO.role());
+        verify(userService).checkIdentifierBeforeUpdate(userDb, updatedUser);
+        verify(userService).checkLoginBeforeUpdate(userDb.getLogin(), updatedUser.getLogin());
+        verify(userService).checkEmailBeforeUpdate(userDb.getEmail(), updatedUser.getEmail());
+        verify(userRepository).save(updatedUser);
+        verify(userDTOMapper).toDto(updatedUser);
+    }
+
+    @Test
+    void testValidateBeforeSave_CoversAllPitestPoints() {
+        // Arrange
+        User entity = spy(new User());
+        Person person = new Person();
+        person.setIdentifier("12345");
+        entity.setPerson(person);
+        entity.setLogin("login");
+        entity.setEmail("email@example.com");
+        entity.setPassword("password");
+
+        String encodedPassword = "encodedPassword";
+        when(passwordEncoder.encode("password")).thenReturn(encodedPassword);
+
+        userService.validateBeforeSave(entity);
+
+        verify(entity).setPassword(encodedPassword);
+        verify(userService).validateIdentifier(person.getIdentifier());
+        verify(userService).validateLogin(entity.getLogin());
+        verify(userService).validateEmail(entity.getEmail());
     }
 }
